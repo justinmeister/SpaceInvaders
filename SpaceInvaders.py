@@ -60,6 +60,7 @@ ARRAYHEIGHT = 4
 MOVETIME = 1000
 MOVEX = 10
 MOVEY = ENEMYHEIGHT
+TIMEOFFSET = 300
 
 ## Direction Dictionary ##
 ## This dictionary allows for shooting bullets while moving without ##
@@ -128,23 +129,25 @@ class Bullet(pygame.sprite.Sprite):
         
 
 class Enemy(pygame.sprite.Sprite):
+    
     def __init__(self, row, column):
         pygame.sprite.Sprite.__init__(self)
         self.width = ENEMYWIDTH
         self.height = ENEMYHEIGHT
         self.row = row
         self.column = column
-        self.color = RED
-        self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(self.color)
+        self.image = self.setImage()
         self.rect = self.image.get_rect()
-        self.name = ENEMYNAME
+        self.name = 'enemy'
         self.vectorx = 1
         self.moveNumber = 0
+        self.moveTime = MOVETIME
+        self.timeOffset = row * TIMEOFFSET
+        self.timer = pygame.time.get_ticks() - self.timeOffset
 
 
-    def update(self, keys, moveEnemies):
-        if moveEnemies:
+    def update(self, keys, currentTime):
+        if currentTime - self.timer > self.moveTime:
             if self.moveNumber < 6:
                 self.rect.x += MOVEX * self.vectorx
                 self.moveNumber += 1
@@ -152,11 +155,28 @@ class Enemy(pygame.sprite.Sprite):
                 self.vectorx *= -1
                 self.moveNumber = 0
                 self.rect.y += MOVEY
-                
+                self.moveTime -= 100
+            self.timer = currentTime
+
+
+    def setImage(self):
+        if self.row == 0:
+            image = pygame.image.load('alien1.png')
+        elif self.row == 1:
+            image = pygame.image.load('alien2.png')
+        elif self.row == 2:
+            image = pygame.image.load('alien3.png')
+        else:
+            image = pygame.image.load('alien1.png')
+        image.convert_alpha()
+        image = pygame.transform.scale(image, (self.width, self.height))
+
+        return image
 
 
 
 class App(object):
+    
     def __init__(self):
         pygame.init()
         self.displaySurf, self.displayRect = self.makeScreen()
@@ -167,18 +187,8 @@ class App(object):
         self.keys = pygame.key.get_pressed()
         self.clock = pygame.time.Clock()
         self.fps = 60
-        self.lastMove = 0
         self.enemyMoves = 0
-        self.moveEnemies = False
-        self.setTimers()
-
-
-
-
-    def setTimers(self):
-        pygame.time.set_timer(USEREVENT + 1, MOVETIME)
-
-        
+    
 
     def makeScreen(self):
         pygame.display.set_caption(GAMETITLE)
@@ -201,20 +211,16 @@ class App(object):
 
 
     def makeEnemies(self):
-        enemyGroup = pygame.sprite.Group()
+        enemies = pygame.sprite.Group()
         
         for row in range(ARRAYHEIGHT):
             for column in range(ARRAYWIDTH):
                 enemy = Enemy(row, column)
                 enemy.rect.x = XMARGIN + (column * (ENEMYWIDTH + ENEMYGAP))
                 enemy.rect.y = YMARGIN + (row * (ENEMYHEIGHT + ENEMYGAP))
-                enemyGroup.add(enemy)
+                enemies.add(enemy)
 
-        return enemyGroup
-
-
-    def stopMovement(self):
-        self.moveEnemies = False
+        return enemies
 
 
 
@@ -223,10 +229,6 @@ class App(object):
             self.keys = pygame.key.get_pressed()
             if event.type == QUIT:
                 self.terminate()
-
-            elif event.type == USEREVENT + 1:
-                self.moveEnemies = True
-                
 
             elif event.type == KEYDOWN:
                 if event.key == K_SPACE and len(self.bullets) == 0:
@@ -249,10 +251,10 @@ class App(object):
 
     def mainLoop(self):
         while True:
+            currentTime = pygame.time.get_ticks()
             self.displaySurf.fill(BGCOLOR)
             self.checkInput()
-            self.allSprites.update(self.keys, self.moveEnemies)
-            self.stopMovement()
+            self.allSprites.update(self.keys, currentTime)
             self.checkCollisions()
             self.allSprites.draw(self.displaySurf)
             pygame.display.update()
