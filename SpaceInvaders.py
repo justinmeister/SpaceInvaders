@@ -26,7 +26,7 @@ COMBLUE   = (233, 232, 255)
 ## Player Constants ##
 
 PLAYERWIDTH = 50
-PLAYERHEIGHT = 35
+PLAYERHEIGHT = 15
 PLAYERCOLOR = COMBLUE
 PLAYER1 = 'Player 1'
 PLAYERSPEED = 5
@@ -175,19 +175,51 @@ class Enemy(pygame.sprite.Sprite):
 
 
 
+class Text(object):
+    def __init__(self, font, size, message, color, rect, surface):
+        self.font = pygame.font.Font(font, size)
+        self.message = message
+        self.surface = self.font.render(self.message, True, color)
+        self.rect = self.surface.get_rect()
+        self.setRect(rect)
+
+    def setRect(self, rect):
+        self.rect.centerx, self.rect.centery = rect.centerx, rect.centery - 5
+
+
+    def draw(self, surface):
+        surface.blit(self.surface, self.rect)
+
+
+
 class App(object):
     
     def __init__(self):
         pygame.init()
         self.displaySurf, self.displayRect = self.makeScreen()
+        self.gameStart = True
+        self.needToMakeEnemies = True
+        
+        self.introMessage1 = Text('orena.ttf', 25,
+                                 'Welcome to Space Invaders!',
+                                 GREEN, self.displayRect,
+                                 self.displaySurf)
+        self.introMessage2 = Text('orena.ttf', 20,
+                                  'Press Any Key to Continue',
+                                  GREEN, self.displayRect,
+                                  self.displaySurf)
+        self.introMessage2.rect.top = self.introMessage1.rect.bottom + 5
+        
         self.player = self.makePlayer()
         self.bullets = pygame.sprite.Group()
-        self.enemies = self.makeEnemies()
-        self.allSprites = pygame.sprite.Group(self.player, self.enemies)
+        self.allSprites = pygame.sprite.Group(self.player)
         self.keys = pygame.key.get_pressed()
         self.clock = pygame.time.Clock()
         self.fps = 60
         self.enemyMoves = 0
+
+
+        
     
 
     def makeScreen(self):
@@ -235,6 +267,16 @@ class App(object):
                     bullet = Bullet(self.player.rect)
                     self.bullets.add(bullet)
                     self.allSprites.add(bullet)
+                elif event.key == K_ESCAPE:
+                    self.terminate()
+
+
+    def gameStartInput(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.terminate()
+            elif event.type == KEYUP:
+                self.gameStart = False
 
         
 
@@ -251,14 +293,27 @@ class App(object):
 
     def mainLoop(self):
         while True:
-            currentTime = pygame.time.get_ticks()
-            self.displaySurf.fill(BGCOLOR)
-            self.checkInput()
-            self.allSprites.update(self.keys, currentTime)
-            self.checkCollisions()
-            self.allSprites.draw(self.displaySurf)
-            pygame.display.update()
-            self.clock.tick(self.fps)
+            if self.gameStart:
+                self.displaySurf.fill(BGCOLOR)
+                self.introMessage1.draw(self.displaySurf)
+                self.introMessage2.draw(self.displaySurf)
+                self.gameStartInput()
+                pygame.display.update()
+                
+            else:
+                if self.needToMakeEnemies:
+                    self.enemies = self.makeEnemies()
+                    self.allSprites.add(self.enemies)
+                    self.needToMakeEnemies = False
+                else:    
+                    currentTime = pygame.time.get_ticks()
+                    self.displaySurf.fill(BGCOLOR)
+                    self.checkInput()
+                    self.allSprites.update(self.keys, currentTime)
+                    self.checkCollisions()
+                    self.allSprites.draw(self.displaySurf)
+                    pygame.display.update()
+                    self.clock.tick(self.fps)
             
             
     
