@@ -92,6 +92,7 @@ class Player(pygame.sprite.Sprite):
                 self.rect.x += DIRECT_DICT[key] * self.speed
                 
         self.checkForSide()
+        self.image.fill(self.color)
 
 
     def checkForSide(self):
@@ -224,6 +225,23 @@ class App(object):
 
 
 
+    def checkForEnemyBullets(self):
+        redBulletsGroup = pygame.sprite.Group()
+
+        for bullet in self.bullets:
+            if bullet.color == RED:
+                redBulletsGroup.add(bullet)
+
+        for bullet in redBulletsGroup:
+            if pygame.sprite.collide_rect(bullet, self.player):
+                if self.player.color == GREEN:
+                    self.player.color = YELLOW
+                elif self.player.color == YELLOW:
+                    self.player.color = RED
+                bullet.kill()
+
+
+
     def shootEnemyBullet(self, rect):
         if (pygame.time.get_ticks() - self.enemyBulletTimer) > BULLETOFFSET:
             self.bullets.add(Bullet(rect, RED, 1, 5))
@@ -322,6 +340,7 @@ class App(object):
 
 
     def checkCollisions(self):
+        self.checkForEnemyBullets()
         pygame.sprite.groupcollide(self.bullets, self.enemies, True, True)
         
                 
