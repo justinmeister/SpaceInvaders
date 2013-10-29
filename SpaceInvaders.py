@@ -2,6 +2,7 @@
 
 import pygame
 import sys
+from random import shuffle
 from pygame.locals import *
 
 ##CONSTANTS##
@@ -45,9 +46,7 @@ YMARGIN = 50
 
 BULLETWIDTH = 5
 BULLETHEIGHT = 5
-BULLETCOLOR = GREEN
-BULLETNAME = 'Bullet'
-BULLETSPEED = 20
+BULLETOFFSET = 2000
 
 ## Enemy Constants ##
 
@@ -106,24 +105,27 @@ class Player(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, playerRect):
+    def __init__(self, rect, color, vectory, speed):
         pygame.sprite.Sprite.__init__(self)
         self.width = BULLETWIDTH
         self.height = BULLETHEIGHT
-        self.color = BULLETCOLOR
+        self.color = color
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(self.color)
         self.rect = self.image.get_rect()
-        self.rect.centerx = playerRect.centerx
-        self.rect.bottom = playerRect.top
-        self.name = BULLETNAME
-        self.vectory = -1
-        self.speed = BULLETSPEED
+        self.rect.centerx = rect.centerx
+        self.rect.top = rect.bottom
+        self.name = 'bullet'
+        self.vectory = vectory
+        self.speed = speed
 
     def update(self, *args):
         self.rect.y += self.vectory * self.speed
 
         if self.rect.bottom < 0:
+            self.kill()
+
+        elif self.rect.bottom > 500:
             self.kill()
 
         
@@ -155,7 +157,8 @@ class Enemy(pygame.sprite.Sprite):
                 self.vectorx *= -1
                 self.moveNumber = 0
                 self.rect.y += MOVEY
-                self.moveTime -= 100
+                if self.moveTime > 100:
+                    self.moveTime -= 100
             self.timer = currentTime
 
 
@@ -217,8 +220,44 @@ class App(object):
         self.clock = pygame.time.Clock()
         self.fps = 60
         self.enemyMoves = 0
+        self.enemyBulletTimer = pygame.time.get_ticks()
 
 
+
+    def shootEnemyBullet(self, rect):
+        if (pygame.time.get_ticks() - self.enemyBulletTimer) > BULLETOFFSET:
+            self.bullets.add(Bullet(rect, RED, 1, 5))
+            self.allSprites.add(self.bullets)
+            self.enemyBulletTimer = pygame.time.get_ticks()
+
+
+
+    def findEnemyShooter(self):
+        columnList = []
+        for enemy in self.enemies:
+            columnList.append(enemy.column)
+
+        #get rid of duplicate columns
+        columnSet = set(columnList)
+        columnList = list(columnSet)
+        shuffle(columnList)
+        column = columnList[0]
+        enemyList = []
+        rowList = []
+
+        for enemy in self.enemies:
+            if enemy.column == column:
+                rowList.append(enemy.row)
+
+        row = max(rowList)
+
+        for enemy in self.enemies:
+            if enemy.column == column and enemy.row == row:
+                self.shooter = enemy 
+
+        
+        
+        
         
     
 
@@ -242,6 +281,7 @@ class App(object):
         return player
 
 
+
     def makeEnemies(self):
         enemies = pygame.sprite.Group()
         
@@ -263,8 +303,8 @@ class App(object):
                 self.terminate()
 
             elif event.type == KEYDOWN:
-                if event.key == K_SPACE and len(self.bullets) == 0:
-                    bullet = Bullet(self.player.rect)
+                if event.key == K_SPACE and len(self.bullets) < 2:
+                    bullet = Bullet(self.player.rect, GREEN, -1, 20)
                     self.bullets.add(bullet)
                     self.allSprites.add(bullet)
                 elif event.key == K_ESCAPE:
@@ -310,6 +350,9 @@ class App(object):
                     self.displaySurf.fill(BGCOLOR)
                     self.checkInput()
                     self.allSprites.update(self.keys, currentTime)
+                    if len(self.enemies) > 0:
+                        self.findEnemyShooter()
+                        self.shootEnemyBullet(self.shooter.rect)
                     self.checkCollisions()
                     self.allSprites.draw(self.displaySurf)
                     pygame.display.update()
