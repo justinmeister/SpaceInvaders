@@ -135,7 +135,7 @@ class Bullet(pygame.sprite.Sprite):
         self.name = 'bullet'
         self.vectory = vectory
         self.speed = speed
-        self.oldLocation = (self.rect.x, self.rect.y)
+    
 
     def update(self, *args):
         self.oldLocation = (self.rect.x, self.rect.y)
@@ -423,30 +423,29 @@ class App(object):
     def checkCollisions(self):
         self.checkForEnemyBullets()
         pygame.sprite.groupcollide(self.bullets, self.enemies, True, True)
+        pygame.sprite.groupcollide(self.enemies, self.allBlockers, False, True)
+        self.collide_green_blockers()
+        self.collide_red_blockers()
         
 
-        if len(self.greenBullets) > 0 and len(self.allBlockers) > 0:
-            for bullet in self.greenBullets:
-                for blocker in self.allBlockers:
-                    sweptBullet = Bullet(self.player.rect, GREEN, -1, 20)
-                    sweptBullet.rect.x, sweptBullet.rect.y =  bullet.oldLocation[0], bullet.oldLocation[1]
+        
+    def collide_green_blockers(self):
+        for bullet in self.greenBullets:
+            casting = Bullet(self.player.rect, GREEN, -1, 20)
+            casting.rect = bullet.rect.copy()
+            for pixel in range(bullet.speed):
+                hit = pygame.sprite.spritecollideany(casting,self.allBlockers)
+                if hit:
+                    hit.kill()
+                    bullet.kill()
+                    break
+                casting.rect.y -= 1
 
-                    for pixel in range(bullet.speed):
-                        if pygame.sprite.collide_rect(sweptBullet, blocker):
-                            bullet.kill()
-                            sweptBullet.kill()
-                            blocker.kill()
-                            break
-                        sweptBullet.rect.y -= 1
 
-
-        redBullets = pygame.sprite.Group()
-        for bullet in self.bullets:
-            if bullet.color == RED:
-                redBullets.add(bullet)
-
-        pygame.sprite.groupcollide(redBullets, self.allBlockers, True, True)
-
+    def collide_red_blockers(self):
+        reds = (shot for shot in self.bullets if shot.color == RED)
+        red_bullets = pygame.sprite.Group(reds)
+        pygame.sprite.groupcollide(red_bullets, self.allBlockers, True, True)
 
     
 
@@ -492,7 +491,7 @@ class App(object):
                 self.gameOverMessage.draw(self.displaySurf)
                 #prevent users from exiting the GAME OVER screen
                 #too quickly
-                if (pygame.time.get_ticks() - self.gameOverTime) > 1000:
+                if (pygame.time.get_ticks() - self.gameOverTime) > 2000:
                     self.gameOverInput()
                 pygame.display.update()
                 
