@@ -104,6 +104,7 @@ class Player(pygame.sprite.Sprite):
             self.vectorx = 0
 
 
+
 class Blocker(pygame.sprite.Sprite):
     def __init__(self, side, color, row, column):
         pygame.sprite.Sprite.__init__(self)
@@ -117,8 +118,6 @@ class Blocker(pygame.sprite.Sprite):
         self.row = row
         self.column = column
 
-    def update(self, *args):
-        pass
 
 
 class Bullet(pygame.sprite.Sprite):
